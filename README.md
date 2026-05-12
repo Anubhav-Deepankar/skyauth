@@ -66,6 +66,14 @@ To test from your phone on the same Wi-Fi, use the `Mobile` URL the server print
 | POST | `/api/verify` | Submit photo + sensor data for verification |
 | GET | `/api/transactions` | List recent transactions |
 
+## Live Deployment
+
+The project is deployed and accessible at:
+
+https://www.drrrhd.com](https://skyauth-c1ht.onrender.com)
+
+
+
 ## Notes on the free tiers
 
 - **OpenWeather:** newly created keys can take up to ~2 hours to activate. Until then you'll see `401 Unauthorized` from `api.openweathermap.org`; the server logs the failure and falls back to a degraded weather record (no crash).
