@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0e1a">
+<title>SkyAuth — Secure Payment</title>
+<style>
+  :root {
+    --bg:        #0a0e1a;
+    --card:      #111827;
+    --card2:     #1a2235;
+    --border:    #1f2d45;
+    --blue:      #3b82f6;
+    --blue2:     #60a5fa;
+    --green:     #10b981;
+    --red:       #ef4444;
+    --amber:     #f59e0b;
+    --text:      #f1f5f9;
+    --muted:     #64748b;
+    --accent:    #6366f1;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── TOP NAV ── */
+  .nav {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1rem; }
+  .nav-logo .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .nav-secure { font-size: 0.7rem; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .nav-secure svg { width: 12px; height: 12px; }
+
+  /* ── PAGES ── */
+  .page { display: none; width: 100%; max-width: 480px; padding: 0 20px 40px; flex-direction: column; gap: 16px; }
+  .page.active { display: flex; }
+
+  /* ── PAYMENT HEADER ── */
+  .payment-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #0a0e1a 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .payment-header::before {
+    content: '';
+    position: absolute; top: 0; right: 0;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .merchant-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .merchant-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+  }
+  .merchant-name { font-weight: 700; font-size: 0.95rem; }
+  .merchant-sub  { font-size: 0.75rem; color: var(--muted); }
+  .amount-display { font-size: 2.4rem; font-weight: 800; letter-spacing: -1px; }
+  .amount-label  { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+  .tx-id { font-size: 0.65rem; color: var(--muted); font-family: monospace; margin-top: 8px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+  }
+  .card-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── INPUT ── */
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 0.78rem; color: var(--muted); font-weight: 500; }
+  input {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 13px 16px;
+    font-size: 1rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  input:focus { border-color: var(--blue); }
+  input[type=number] { font-size: 1.2rem; font-weight: 700; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    border: none;
+    border-radius: 14px;
+    padding: 15px 20px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: inherit;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(59,130,246,0.35);
+  }
+  .btn-secondary {
+    background: var(--card2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-green  { background: linear-gradient(135deg, #059669, #10b981); color: #fff; box-shadow: 0 4px 20px rgba(16,185,129,0.35); }
+  .btn-red    { background: linear-gradient(135deg, #dc2626, #ef4444); color: #fff; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── STEP INDICATOR ── */
+  .steps { display: flex; align-items: center; gap: 6px; padding: 16px 20px 0; }
+  .step-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border); flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .step-dot.active   { background: var(--blue); box-shadow: 0 0 8px var(--blue); }
+  .step-dot.done     { background: var(--green); }
+  .step-line { flex: 1; height: 1px; background: var(--border); }
+
+  /* ── COMPASS ── */
+  .compass-ring {
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    border: 3px solid var(--border);
+    background: radial-gradient(circle, #111827 60%, #0a0e1a 100%);
+    margin: 0 auto;
+    position: relative;
+    box-shadow: 0 0 30px rgba(59,130,246,0.15), inset 0 0 30px rgba(0,0,0,0.5);
+  }
+  .compass-needle {
+    position: absolute;
+    width: 4px;
+    height: 70px;
+    left: 50%;
+    transform-origin: bottom center;
+    transform: translateX(-50%) rotate(0deg);
+    bottom: 50%;
+    transition: transform 0.3s ease;
+  }
+  .needle-north { background: linear-gradient(to top, transparent, #ef4444); border-radius: 2px; }
+  .needle-south { background: linear-gradient(to bottom, transparent, #fff); border-radius: 2px; }
+  .compass-center {
+    position: absolute;
+    width: 12px; height: 12px;
+    background: var(--text);
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+  }
+  .compass-labels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    position: absolute;
+    inset: -6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-align: center;
+  }
+  .compass-labels span { display: flex; align-items: center; justify-content: center; }
+  .compass-labels .N { color: var(--blue2); }
+  .target-arrow {
+    position: absolute;
+    bottom: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.72rem;
+    color: var(--amber);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ── TILT METER ── */
+  .tilt-meter {
+    width: 100%;
+    height: 28px;
+    background: var(--card2);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .tilt-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #6366f1);
+    transition: width 0.2s;
+    border-radius: 8px;
+  }
+  .tilt-target {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 3px;
+    background: var(--amber);
+    transition: left 0.2s;
+  }
+
+  /* ── SENSOR BADGES ── */
+  .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sensor-badge {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+  }
+  .sensor-badge .val { font-size: 1.1rem; font-weight: 800; }
+  .sensor-badge .lbl { font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
+  .sensor-badge.ok   { border-color: var(--green); }
+  .sensor-badge.warn { border-color: var(--amber); }
+  .sensor-badge.bad  { border-color: var(--red); }
+
+  /* ── CAMERA ── */
+  #cameraPreview {
+    width: 100%;
+    border-radius: 16px;
+    object-fit: cover;
+    background: #000;
+    aspect-ratio: 4/3;
+    display: none;
+  }
+  #capturedImage {
+    width: 100%;
+    border-radius: 16px;
+    object-fit: cover;
+    aspect-ratio: 4/3;
+    display: none;
+    border: 2px solid var(--green);
+  }
+
+  /* ── RESULT CARD ── */
+  .result-screen {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+    padding: 30px 20px;
+    gap: 16px;
+  }
+  .result-icon {
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem;
+  }
+  .result-icon.approved { background: rgba(16,185,129,0.15); border: 3px solid var(--green); box-shadow: 0 0 30px rgba(16,185,129,0.3); }
+  .result-icon.denied   { background: rgba(239,68,68,0.15);  border: 3px solid var(--red);   box-shadow: 0 0 30px rgba(239,68,68,0.3); }
+  .result-title { font-size: 1.6rem; font-weight: 800; }
+  .result-amount { font-size: 1.1rem; font-weight: 600; color: var(--muted); }
+  .result-hash { font-family: monospace; font-size: 0.6rem; color: var(--muted); word-break: break-all; }
+
+  /* ── SCORE RING ── */
+  .score-ring-wrap { position: relative; width: 120px; height: 120px; }
+  .score-ring-wrap svg { width: 100%; height: 100%; }
+  .score-ring-val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .score-ring-val .big { font-size: 1.6rem; font-weight: 800; }
+  .score-ring-val .sm  { font-size: 0.65rem; color: var(--muted); }
+
+  /* ── BREAKDOWN ── */
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.82rem;
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-row .lbl { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .breakdown-row .pts { font-weight: 700; }
+  .pts.hi { color: var(--green); }
+  .pts.lo { color: var(--red); }
+  .pts.mid { color: var(--amber); }
+
+  /* ── DENIAL BOX ── */
+  .denial-box {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.4);
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 0.82rem;
+  }
+  .denial-box .ttl { color: var(--red); font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .denial-box ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .denial-box li { padding-left: 16px; position: relative; color: #fca5a5; }
+  .denial-box li::before { content: '→'; position: absolute; left: 0; color: var(--red); }
+
+  /* ── INFO CHIPS ── */
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 5px 12px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .chip .dot2 { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* ── SPINNER ── */
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── PROGRESS ── */
+  .progress-bar-wrap { background: var(--card2); border-radius: 100px; height: 6px; overflow: hidden; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #6366f1); border-radius: 100px; transition: width 0.5s; }
+
+  /* ── SUN INFO ── */
+  .sun-info {
+    background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(251,191,36,0.05));
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 0.8rem;
+  }
+  .sun-info .sun-title { color: var(--amber); font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .sun-row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--muted); }
+  .sun-row span:last-child { color: var(--text); font-weight: 600; }
+
+  /* ── VERIFICATION STEPS ── */
+  .verify-step { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .verify-step:last-child { border-bottom: none; }
+  .verify-step .icon { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.9rem; }
+  .verify-step .icon.ok   { background: rgba(16,185,129,0.15); }
+  .verify-step .icon.fail { background: rgba(239,68,68,0.15); }
+  .verify-step .icon.wait { background: rgba(99,102,241,0.15); }
+  .verify-step .info .title { font-size: 0.83rem; font-weight: 600; }
+  .verify-step .info .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+  .section-title { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .badge { background: rgba(99,102,241,0.2); color: #a5b4fc; border-radius: 100px; padding: 2px 10px; font-size: 0.7rem; font-weight: 700; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 0.82rem;
+    transition: transform 0.3s;
+    z-index: 100;
+    white-space: nowrap;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .rf-bar-wrap { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .rf-bar-row  { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; }
+  .rf-bar-lbl  { width: 130px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rf-bar-bg   { flex: 1; height: 6px; background: var(--border); border-radius: 100px; overflow: hidden; }
+  .rf-bar-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--blue), var(--accent)); }
+  .rf-pct { width: 36px; text-align: right; color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-logo">
+    <div class="dot"></div>
+    SkyAuth
+  </div>
+  <div class="nav-secure">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    256-bit secured
+  </div>
+</div>
+
+<!-- STEP DOTS -->
+<div class="steps" id="stepDots">
+  <div class="step-dot active" id="dot0"></div>
+  <div class="step-line"></div>
+  <div class="step-dot" id="dot1"></div>
+  <div class="step-line"></div>
+  <div class="step-dot" id="dot2"></div>
+  <div class="step-line"></div>
+  <div class="step-dot" id="dot3"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 0: PAYMENT ENTRY
+══════════════════════════════════════ -->
+<div class="page active" id="page0">
+  <div class="payment-header">
+    <div class="merchant-row">
+      <div class="merchant-icon">🛒</div>
+      <div>
+        <div class="merchant-name">Secure Merchant</div>
+        <div class="merchant-sub">skyauth.io · Verified Merchant</div>
+      </div>
+    </div>
+    <div class="amount-label">PAYMENT AMOUNT</div>
+    <div class="amount-display" id="amountDisplay">₹0.00</div>
+    <div class="tx-id" id="txIdDisplay">TXN: —</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💳 Transaction Details</div>
+    <div class="input-group">
+      <label>Amount (₹)</label>
+      <input type="number" id="amountInput" placeholder="0.00" min="1" step="0.01" inputmode="decimal">
+    </div>
+    <div style="margin-top:12px" class="input-group">
+      <label>Customer ID</label>
+      <input type="text" id="userInput" placeholder="e.g. cust_9182736">
+    </div>
+  </div>
+
+  <div class="card" style="background: rgba(59,130,246,0.06); border-color: rgba(59,130,246,0.3);">
+    <div style="font-size:0.82rem; color:var(--muted); line-height: 1.6;">
+      🌤️ <strong style="color:var(--text)">SkyAuth</strong> verifies your payment using your physical location 
+      and a live photo of the sky. The sun's position is computed from your GPS and verified against your camera image.
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="startPayment()">
+    🔐 Authenticate Payment
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 1: LOCATION & SENSORS
+══════════════════════════════════════ -->
+<div class="page" id="page1">
+  <div class="section-title" style="margin-top:16px">
+    📍 Environment Scan
+    <span class="badge">Step 1 of 3</span>
+  </div>
+
+  <div class="sun-info" id="sunInfoBox" style="display:none">
+    <div class="sun-title">☀️ Live Solar Position</div>
+    <div class="sun-row"><span>Azimuth</span><span id="sunAz">—</span></div>
+    <div class="sun-row"><span>Elevation</span><span id="sunEl">—</span></div>
+    <div class="sun-row"><span>Direction</span><span id="sunDir">—</span></div>
+    <div class="sun-row"><span>Status</span><span id="sunStatus">—</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📡 Sensor Status</div>
+    <div class="sensor-grid" id="sensorGrid">
+      <div class="sensor-badge" id="badge-gps"><div class="val">—</div><div class="lbl">GPS</div></div>
+      <div class="sensor-badge" id="badge-compass"><div class="val">—°</div><div class="lbl">Compass</div></div>
+      <div class="sensor-badge" id="badge-tilt"><div class="val">—°</div><div class="lbl">Tilt</div></div>
+      <div class="sensor-badge" id="badge-accuracy"><div class="val">—</div><div class="lbl">Accuracy</div></div>
+    </div>
+  </div>
+
+  <button class="btn btn-secondary" id="btnGetSensors" onclick="getSensors()">
+    📡 Get Location & Sensors
+  </button>
+  <button class="btn btn-primary" id="btnProceedChallenge" style="display:none" onclick="initiateChallenge()">
+    Continue to Challenge →
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 2: CHALLENGE
+══════════════════════════════════════ -->
+<div class="page" id="page2">
+  <div class="section-title" style="margin-top:16px">
+    ☀️ Sky Challenge
+    <span class="badge">Step 2 of 3</span>
+  </div>
+
+  <div class="card" id="challengeCard">
+    <div class="card-title">📸 Photograph the Sky</div>
+    <p style="font-size:0.85rem; color:var(--muted); margin-bottom:16px" id="challengeInstruction">
+      Point your camera at the sky where the sun is visible and take a photo. SkyAuth's AI will verify your image automatically.
+    </p>
+
+    <!-- Sun info panel -->
+    <div style="background:var(--card2); border-radius:10px; padding:12px 14px; margin-bottom:14px; font-size:0.82rem; display:flex; flex-direction:column; gap:6px">
+      <div style="display:flex; justify-content:space-between">
+        <span style="color:var(--muted)">☀️ Sun position</span>
+        <span id="sunInfoText" style="color:var(--amber); font-weight:600">Loading...</span>
+      </div>
+      <div style="display:flex; justify-content:space-between">
+        <span style="color:var(--muted)">🤖 Verification</span>
+        <span style="color:var(--muted); font-size:0.78rem">Gemini AI will analyse your photo</span>
+      </div>
+      <div style="color:var(--muted); font-size:0.75rem; margin-top:2px" id="sunHint">
+        💡 Tip: Include the sun or the bright part of the sky in your photo
+      </div>
+    </div>
+  </div>
+
+  <!-- Timer -->
+  <div style="display:flex; align-items:center; gap:10px">
+    <div style="flex:1">
+      <div style="font-size:0.72rem; color:var(--muted); margin-bottom:4px">Time remaining</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="timerBar" style="width:100%"></div>
+      </div>
+    </div>
+    <div style="font-size:1.4rem; font-weight:800; color:var(--amber)" id="timerDisplay">120s</div>
+  </div>
+
+  <!-- Camera -->
+  <div class="card">
+    <div class="card-title">📸 Sky Photo</div>
+    <video id="cameraPreview" autoplay playsinline muted></video>
+    <img id="capturedImage" alt="Captured sky">
+    <div id="cameraPlaceholder" style="width:100%; aspect-ratio:4/3; background:var(--card2); border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:0.85rem; flex-direction:column; gap:8px; border: 1px dashed var(--border)">
+      <span style="font-size:2rem">📷</span>
+      <span>Camera will activate here</span>
+    </div>
+    <canvas id="captureCanvas" style="display:none"></canvas>
+    <div style="margin-top:12px; display:flex; gap:8px">
+      <button class="btn btn-secondary" id="btnCamera" onclick="startCamera()">📷 Activate Camera</button>
+      <button class="btn btn-primary"  id="btnCapture" onclick="capturePhoto()" style="display:none">⚡ Capture</button>
+    </div>
+  </div>
+
+  <button class="btn btn-green" id="btnSubmit" onclick="submitVerification()" disabled>
+    🛡️ Verify Payment
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     PAGE 3: RESULT
+══════════════════════════════════════ -->
+<div class="page" id="page3">
+  <div class="result-screen" id="resultScreen">
+    <div class="spinner" id="resultSpinner"></div>
+    <div style="color:var(--muted); font-size:0.85rem">Analyzing with AI & RF model...</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────
+let state = {
+  amount: 0, userId: '', txId: '', sessionId: '',
+  challenge: null,
+  lat: null, lon: null, accuracy: null,
+  heading: 0, tilt: 0, roll: 0,
+  capturedImageB64: null,
+  timerInterval: null, timerLeft: 90,
+  stream: null,
+  sensors_ready: false,
+};
+
+// ── UTILS ──────────────────────────────────────────────
+function showPage(n) {
+  document.querySelectorAll('.page').forEach((p,i) => p.classList.toggle('active', i === n));
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('dot' + i);
+    d.className = 'step-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+  }
+}
+
+function toast(msg, ms = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function txId() {
+  return 'TXN' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+}
+
+function fmt(n) { return '₹' + parseFloat(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+function setBadge(id, val, label, status) {
+  const el = document.getElementById(id);
+  el.innerHTML = `<div class="val">${val}</div><div class="lbl">${label}</div>`;
+  el.className = 'sensor-badge ' + (status || '');
+}
+
+// ── PAGE 0: START ──────────────────────────────────────
+function startPayment() {
+  const amt = parseFloat(document.getElementById('amountInput').value);
+  const uid = document.getElementById('userInput').value.trim() || 'cust_' + Math.random().toString(36).substring(2, 8);
+  if (!amt || amt <= 0) { toast('❌ Enter a valid payment amount'); return; }
+  state.amount = amt;
+  state.userId = uid;
+  state.txId   = txId();
+  document.getElementById('amountDisplay').textContent = fmt(amt);
+  document.getElementById('txIdDisplay').textContent   = 'TXN: ' + state.txId;
+  showPage(1);
+}
+
+// ── PAGE 1: SENSORS ────────────────────────────────────
+let _motionGranted = false;
+
+async function getSensors() {
+  const btn = document.getElementById('btnGetSensors');
+  btn.disabled = true;
+  btn.textContent = '⏳ Fetching...';
+
+  // GPS
+  if (!navigator.geolocation) { toast('❌ Geolocation not supported'); btn.disabled = false; return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      state.lat      = pos.coords.latitude;
+      state.lon      = pos.coords.longitude;
+      state.accuracy = Math.round(pos.coords.accuracy);
+      const ll = state.lat.toFixed(4) + ', ' + state.lon.toFixed(4);
+      setBadge('badge-gps',      ll,               'GPS Location', 'ok');
+      setBadge('badge-accuracy', '±' + state.accuracy + 'm', 'Accuracy', state.accuracy < 50 ? 'ok' : 'warn');
+      startMotion();
+    },
+    err => { toast('❌ GPS error: ' + err.message); btn.disabled = false; btn.textContent = '📡 Get Location & Sensors'; },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+}
+
+function startMotion() {
+  const start = () => {
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', onOrientation, true);
+    }
+    document.getElementById('btnGetSensors').style.display = 'none';
+    document.getElementById('btnProceedChallenge').style.display = 'flex';
+    state.sensors_ready = true;
+    toast('✅ Location acquired!');
+  };
+
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(p => { if (p === 'granted') start(); }).catch(start);
+  } else {
+    start();
+  }
+}
+
+function onOrientation(e) {
+  const alpha = e.alpha || 0;
+  const beta  = e.beta  || 0;
+  const gamma = e.gamma || 0;
+
+  let heading = e.webkitCompassHeading != null ? e.webkitCompassHeading : (360 - alpha) % 360;
+  state.heading = heading;
+  state.roll    = gamma;
+
+  // Fix: properly compute tilt angle for both normal and flipped phone orientations
+  let tilt;
+  const absBeta = Math.abs(beta);
+
+  if (absBeta <= 90) {
+    // Normal hold (screen facing you, pointing forward/up)
+    tilt = absBeta;
+  } else {
+    // Flipped hold (screen facing away/down, pointing to sky)
+    // beta goes from 90→180 or -90→-180; map to 90→0
+    tilt = 180 - absBeta;
+  }
+
+  state.tilt = Math.max(0, Math.min(90, tilt));
+
+  setBadge('badge-compass', Math.round(heading) + '°', 'Compass Heading', 'ok');
+  setBadge('badge-tilt',    Math.round(state.tilt) + '°', 'Tilt Angle', 'ok');
+
+  updateCompassUI();
+}
+
+// ── PAGE 2: CHALLENGE ──────────────────────────────────
+async function initiateChallenge() {
+  if (!state.lat) { toast('❌ Get sensors first'); return; }
+
+  // POST to /api/initiate with coordinates for sun-aware challenge
+  try {
+    const r = await fetch('/api/initiate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transaction_amount: state.amount,
+        transaction_id:     state.txId,
+        user_id:            state.userId,
+        latitude:           state.lat,
+        longitude:          state.lon,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Server error');
+
+    state.sessionId = d.session_id;
+
+    // Update sun info box
+    const si = d.sun_info || {};
+    if (si.azimuth_deg != null) {
+      document.getElementById('sunInfoBox').style.display = 'block';
+      document.getElementById('sunAz').textContent  = si.azimuth_deg.toFixed(1) + '°';
+      document.getElementById('sunEl').textContent  = si.elevation_deg.toFixed(1) + '°';
+      document.getElementById('sunDir').textContent = si.direction || '—';
+      document.getElementById('sunStatus').textContent = '☀️ Above Horizon';
+    }
+
+    showPage(2);
+    setupSession(si);
+  } catch (err) {
+    toast('❌ ' + err.message);
+  }
+}
+
+function setupSession(sunInfo) {
+  // Update sun info panel
+  if (sunInfo) {
+    const dir = sunInfo.direction || '';
+    const az  = sunInfo.azimuth_deg != null ? sunInfo.azimuth_deg.toFixed(1) : '?';
+    const el  = sunInfo.elevation_deg != null ? sunInfo.elevation_deg.toFixed(1) : '?';
+    document.getElementById('sunInfoText').textContent = `${el}° elevation · ${dir} (${az}°)`;
+    // Helpful tip based on elevation
+    const elNum = parseFloat(el);
+    let tip = '💡 Tip: Include the sun or the bright part of the sky in your photo';
+    if (elNum > 60) tip = '💡 Sun is nearly overhead — point camera upward at the sky';
+    else if (elNum > 30) tip = '💡 Sun is moderately high — point camera diagonally upward toward the sky';
+    else tip = '💡 Sun is low — point camera toward the horizon at the bright sky region';
+    document.getElementById('sunHint').textContent = tip;
+  }
+
+  // Timer — 120 seconds
+  state.timerLeft = 120;
+  clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    state.timerLeft--;
+    const pct = (state.timerLeft / 120) * 100;
+    document.getElementById('timerBar').style.width = pct + '%';
+    document.getElementById('timerDisplay').textContent = state.timerLeft + 's';
+    if (state.timerLeft <= 0) {
+      clearInterval(state.timerInterval);
+      toast('⏰ Time expired — please restart', 5000);
+    }
+  }, 1000);
+}
+
+function updateCompassUI() {
+  // Compass and tilt badge update (badges still shown as sensor info, not as challenge targets)
+  // No-op for compass needle since we removed the compass ring
+}
+
+// ── CAMERA ────────────────────────────────────────────
+async function startCamera() {
+  try {
+    const constraints = { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } } };
+    state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const vid = document.getElementById('cameraPreview');
+    vid.srcObject = state.stream;
+    vid.style.display = 'block';
+    document.getElementById('cameraPlaceholder').style.display = 'none';
+    document.getElementById('btnCamera').style.display = 'none';
+    document.getElementById('btnCapture').style.display = 'flex';
+    toast('📷 Camera active — point at the sky!');
+  } catch (e) {
+    toast('❌ Camera error: ' + e.message);
+  }
+}
+
+function capturePhoto() {
+  const vid = document.getElementById('cameraPreview');
+  const canvas = document.getElementById('captureCanvas');
+  canvas.width  = vid.videoWidth  || 640;
+  canvas.height = vid.videoHeight || 480;
+  canvas.getContext('2d').drawImage(vid, 0, 0);
+  state.capturedImageB64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+
+  // Stop stream
+  if (state.stream) state.stream.getTracks().forEach(t => t.stop());
+  vid.style.display = 'none';
+
+  const img = document.getElementById('capturedImage');
+  img.src = 'data:image/jpeg;base64,' + state.capturedImageB64;
+  img.style.display = 'block';
+  document.getElementById('btnCapture').style.display = 'none';
+
+  document.getElementById('btnSubmit').disabled = false;
+  toast('✅ Photo captured!');
+}
+
+// ── SUBMIT ────────────────────────────────────────────
+async function submitVerification() {
+  if (!state.capturedImageB64) { toast('❌ Capture a photo first'); return; }
+  if (!state.sessionId) { toast('❌ No active session'); return; }
+
+  clearInterval(state.timerInterval);
+  showPage(3);
+
+  document.getElementById('resultScreen').innerHTML = `
+    <div class="spinner"></div>
+    <div style="color:var(--muted); font-size:0.85rem; margin-top:12px">Running AI analysis & Random Forest...</div>
+    <div style="color:var(--muted); font-size:0.72rem; margin-top:4px">Verifying solar position via OpenCV...</div>
+  `;
+
+  try {
+    const body = {
+      session_id:        state.sessionId,
+      user_id:           state.userId,
+      transaction_id:    state.txId,
+      latitude:          state.lat,
+      longitude:         state.lon,
+      compass_heading:   state.heading,
+      tilt_angle:        state.tilt,
+      roll_angle:        state.roll,
+      sky_image_base64:  state.capturedImageB64,
+      device_id:         navigator.userAgent.substring(0, 40),
+      timestamp_client:  Math.floor(Date.now() / 1000),
+    };
+
+    const r = await fetch('/api/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Verification error');
+
+    renderResult(d);
+  } catch (err) {
+    document.getElementById('resultScreen').innerHTML = `
+      <div class="result-icon denied">⚠️</div>
+      <div class="result-title" style="color:var(--red)">Error</div>
+      <div style="color:var(--muted);font-size:0.82rem">${err.message}</div>
+      <button class="btn btn-secondary" onclick="showPage(2)" style="margin-top:8px">← Try Again</button>
+    `;
+  }
+}
+
+function renderResult(d) {
+  const approved  = d.approved;
+  const rf        = d.rf_decision || {};
+  const cs        = d.classic_score || 0;
+  const breakdown = d.breakdown    || {};
+  const sun       = d.solar_position || {};
+  const cv        = d.sun_cv_analysis || {};
+  const fake      = d.fake_detection  || {};
+  const ai        = d.ai_analysis     || {};
+  const weather   = d.weather         || {};
+  const tx        = d.transaction     || {};
+
+  const conf = rf.confidence || cs;
+  const ringColor = approved ? '#10b981' : '#ef4444';
+  const ringDash  = Math.round(conf / 100 * 251);
+
+  // Gemini verdict display
+  const verdict = d.gemini_verdict || ai.overall_verdict || '—';
+  const verdictColor = {
+    'genuine_sun_visible':  '#10b981',
+    'genuine_sun_obscured': '#f59e0b',
+    'suspicious':           '#f97316',
+    'fake':                 '#ef4444',
+    'not_sky':              '#ef4444',
+  }[verdict] || '#888';
+  const verdictLabel = {
+    'genuine_sun_visible':  '✅ Genuine — Sun visible',
+    'genuine_sun_obscured': '✅ Genuine — Sun obscured',
+    'suspicious':           '⚠️ Suspicious',
+    'fake':                 '🚫 Fake / Screenshot',
+    'not_sky':              '🚫 Not a sky image',
+  }[verdict] || verdict;
+
+  const geminiBlock = `
+    <div class="card" style="border-left: 3px solid ${verdictColor}">
+      <div class="card-title">🤖 Gemini AI Verdict</div>
+      <div style="font-size:1rem; font-weight:700; color:${verdictColor}; margin-bottom:8px">${verdictLabel}</div>
+      <div style="font-size:0.8rem; color:var(--muted); margin-bottom:6px">
+        <strong style="color:var(--text)">☀️ Sun:</strong> ${d.gemini_sun_reasoning || ai.sun_visibility_reason || '—'}
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted); margin-bottom:6px">
+        <strong style="color:var(--text)">🛡️ Authenticity:</strong> ${d.gemini_auth_reasoning || ai.authenticity_reason || '—'}
+      </div>
+      ${ai.sun_position_reasoning ? `<div style="font-size:0.8rem; color:var(--muted)"><strong style="color:var(--text)">📍 Sun position:</strong> ${ai.sun_position_reasoning}</div>` : ''}
+      <div style="display:flex; gap:16px; margin-top:10px; font-size:0.75rem">
+        <span style="color:var(--muted)">AI Score: <strong style="color:var(--text)">${ai.ai_score||'?'}/100</strong></span>
+        <span style="color:var(--muted)">Confidence: <strong style="color:var(--text)">${d.gemini_verdict_confidence||ai.verdict_confidence||'?'}%</strong></span>
+        <span style="color:var(--muted)">Sky: <strong style="color:var(--text)">${ai.sky_condition||'—'}</strong></span>
+      </div>
+      ${ai.notes ? `<div style="font-size:0.72rem; color:var(--muted); margin-top:6px; font-style:italic">${ai.notes}</div>` : ''}
+    </div>`;
+
+  // Breakdown rows
+  const bRows = Object.entries(breakdown).map(([k, v]) => {
+    const maxPts = { gps:25, daytime:15, gemini_verdict:15, sun_detected:10, not_fake:15, gemini_score:10, is_sky_image:5, timestamp:10 };
+    const max = maxPts[k] || 10;
+    const pct = v / max;
+    const cls = pct === 1 ? 'hi' : pct >= 0.5 ? 'mid' : 'lo';
+    const icons = { gps:'📍', daytime:'☀️', gemini_verdict:'🤖', sun_detected:'🔍', not_fake:'🛡️', gemini_score:'⭐', is_sky_image:'🌤️', timestamp:'⏱️' };
+    return `<div class="breakdown-row">
+      <span class="lbl">${icons[k]||'·'} ${k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}</span>
+      <span class="pts ${cls}">${v}/${max}</span>
+    </div>`;
+  }).join('');
+
+  // RF feature bars
+  const fi = rf.feature_importance || {};
+  const rfBars = Object.entries(fi).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v]) =>
+    `<div class="rf-bar-row">
+      <div class="rf-bar-lbl">${k}</div>
+      <div class="rf-bar-bg"><div class="rf-bar-fill" style="width:${v}%"></div></div>
+      <div class="rf-pct">${v.toFixed(0)}%</div>
+    </div>`
+  ).join('');
+
+  // Verification steps
+  const vsteps = [
+    { ok: d.solar_position?.is_above_horizon, icon:'☀️', title:'Daylight Verified', sub:`Sun at ${sun.elevation_deg?.toFixed(1)}° elevation, ${sun.azimuth_deg?.toFixed(1)}° azimuth` },
+    { ok: cv.sun_detected || ai.sun_visible,  icon:'🔍', title:'Sun Detected', sub: ai.sun_visibility_reason || (cv.sun_detected ? `OpenCV brightness ratio ${cv.brightness_ratio}` : 'Not detected by OpenCV') },
+    { ok: !fake.is_likely_fake,               icon:'🛡️', title:'Authenticity Check', sub:`Fake probability: ${(fake.fake_probability*100).toFixed(0)}% | Flags: ${(fake.flags||[]).join(', ')||'None'}` },
+    { ok: ['genuine_sun_visible','genuine_sun_obscured'].includes(verdict), icon:'🤖', title:'Gemini AI Verdict', sub:`${verdictLabel} · Score: ${ai.ai_score||'?'}/100` },
+    { ok: rf.approved,                        icon:'🌲', title:'AI Ensemble Decision', sub:`Confidence: ${rf.confidence}% · Rejection risk: ${rf.rejection_risk}%` },
+  ].map(s => `<div class="verify-step">
+    <div class="icon ${s.ok?'ok':'fail'}">${s.ok?'✅':'❌'}</div>
+    <div class="info"><div class="title">${s.icon} ${s.title}</div><div class="sub">${s.sub}</div></div>
+  </div>`).join('');
+
+  // Denial box
+  const denialHtml = (!approved && d.denial_reasons?.length) ? `
+    <div class="denial-box">
+      <div class="ttl">🚫 Reasons for Denial</div>
+      <ul>${d.denial_reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+    </div>` : '';
+
+  document.getElementById('resultScreen').outerHTML = `<div id="resultScreen" class="result-screen" style="align-items:stretch; text-align:left; padding:16px 0 40px">
+    <!-- Big status -->
+    <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px; padding:20px 0">
+      <div class="result-icon ${approved?'approved':'denied'}">${approved?'✅':'🚫'}</div>
+      <div class="result-title" style="color:${approved?'var(--green)':'var(--red)'}">
+        ${approved ? 'Payment Approved' : 'ACCESS DENIED'}
+      </div>
+      <div class="result-amount">${fmt(state.amount)}</div>
+      <div style="font-size:0.78rem;color:var(--muted)">to Secure Merchant</div>
+    </div>
+
+    ${denialHtml}
+
+    <!-- Gemini verdict — shown first and prominently -->
+    ${geminiBlock}
+
+    <!-- Score ring -->
+    <div class="card" style="display:flex; gap:20px; align-items:center">
+      <div class="score-ring-wrap">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border)" stroke-width="8"/>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="${ringColor}" stroke-width="8"
+            stroke-dasharray="${ringDash} 251" stroke-linecap="round"
+            transform="rotate(-90 50 50)" stroke-dashoffset="0"/>
+        </svg>
+        <div class="score-ring-val">
+          <div class="big">${conf.toFixed(0)}%</div>
+          <div class="sm">RF Conf.</div>
+        </div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:0.78rem; color:var(--muted); margin-bottom:4px">Classic Score</div>
+        <div style="font-size:1.5rem; font-weight:800">${cs}<span style="font-size:0.9rem; color:var(--muted)">/100</span></div>
+        <div style="font-size:0.72rem; color:var(--muted); margin-top:6px">Threshold: 55/100</div>
+        <div style="font-size:0.72rem; margin-top:4px; color:${approved?'var(--green)':'var(--red)'}">
+          ${approved ? '✅ PASSED' : '❌ FAILED'}
+        </div>
+      </div>
+    </div>
+
+    <!-- Verification steps -->
+    <div class="card">
+      <div class="card-title">🔬 Verification Pipeline</div>
+      ${vsteps}
+    </div>
+
+    <!-- Score breakdown -->
+    <div class="card">
+      <div class="card-title">📊 Score Breakdown</div>
+      ${bRows}
+    </div>
+
+    <!-- Random Forest details -->
+    <div class="card">
+      <div class="card-title">🌲 Random Forest — Feature Importance</div>
+      <div class="rf-bar-wrap">${rfBars}</div>
+    </div>
+
+    <!-- Sun & weather -->
+    <div class="card">
+      <div class="card-title">☀️ Solar & Weather Data</div>
+      <div class="sun-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.82rem"><span style="color:var(--muted)">Sun Azimuth</span><span>${sun.azimuth_deg?.toFixed(1)}°</span></div>
+      <div class="sun-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.82rem"><span style="color:var(--muted)">Sun Elevation</span><span>${sun.elevation_deg?.toFixed(1)}°</span></div>
+      <div class="sun-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.82rem"><span style="color:var(--muted)">Weather</span><span>${weather.description||'—'}</span></div>
+      <div class="sun-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.82rem"><span style="color:var(--muted)">Temperature</span><span>${weather.temperature_c}°C</span></div>
+      <div class="sun-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:0.82rem"><span style="color:var(--muted)">Cloud Cover</span><span>${weather.clouds_pct}%</span></div>
+    </div>
+
+    <!-- Crypto hash -->
+    <div class="card">
+      <div class="card-title">🔐 Cryptographic Proof</div>
+      <div class="result-hash">${d.crypto_hash}</div>
+      <div style="font-size:0.65rem;color:var(--muted);margin-top:8px">SHA-256 · Transaction: ${state.txId}</div>
+    </div>
+
+    <button class="btn btn-secondary" onclick="location.reload()">← New Payment</button>
+  </div>`;
+}
+
+// ── INIT ───────────────────────────────────────────────
+document.getElementById('amountInput').addEventListener('input', function() {
+  const v = parseFloat(this.value) || 0;
+  document.getElementById('amountDisplay').textContent = fmt(v);
+});
+document.getElementById('amountInput').addEventListener('focus', function() {
+  document.getElementById('amountDisplay').style.color = 'var(--blue2)';
+});
+document.getElementById('amountInput').addEventListener('blur', function() {
+  document.getElementById('amountDisplay').style.color = 'var(--text)';
+});
+</script>
+</body>
+</html>
