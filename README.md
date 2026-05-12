@@ -70,7 +70,7 @@ To test from your phone on the same Wi-Fi, use the `Mobile` URL the server print
 
 The project is deployed and accessible at:
 
-https://www.drrrhd.com](https://skyauth-c1ht.onrender.com)
+https://skyauth-c1ht.onrender.com
 
 
 
